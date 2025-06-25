@@ -2,22 +2,22 @@ package example.infra.client;
 
 import example.model.Address;
 import example.model.Client;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Component
 public class AddressClientImpl implements AddressClient {
 
     private final RestTemplate restTemplate;
     private final Logger logger = LoggerFactory.getLogger(AddressClientImpl.class);
+
+    private final Map<Long, List<Address>> CACHE = new HashMap<>();
 
     private final static String API_URL = UriComponentsBuilder
             .fromHttpUrl("http://localhost:8090/address")
@@ -29,11 +29,8 @@ public class AddressClientImpl implements AddressClient {
         this.restTemplate = restTemplate;
     }
 
-    /*public List<Address> search(Long clientId) {
-        return searchAddresses(clientId);
-    }*/
-
     @Override
+    @CircuitBreaker(name = "addressCB", fallbackMethod = "searchCache")
     public List<Address> searchAddresses(Long clientId) {
         final Map<String, Object> params = new HashMap<>();
         params.put("clientId", clientId);
@@ -48,6 +45,14 @@ public class AddressClientImpl implements AddressClient {
             throw e;
         }
 
+        logger.info("Caching...");
+        CACHE.put(clientId, Arrays.asList(addresses));
+
         return Arrays.asList(addresses);
+    }
+
+    private List<Address> searchCache(Long clientId, Throwable e) {
+        logger.info("Getting from cache");
+        return CACHE.getOrDefault(clientId, new ArrayList<>());
     }
 }
