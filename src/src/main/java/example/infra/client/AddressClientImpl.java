@@ -1,6 +1,7 @@
-package example.infra;
+package example.infra.client;
 
 import example.model.Address;
+import example.model.Client;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -13,7 +14,7 @@ import java.util.List;
 import java.util.Map;
 
 @Component
-public class AddressClientImpl implements AddressClient{
+public class AddressClientImpl implements AddressClient {
 
     private final RestTemplate restTemplate;
     private final Logger logger = LoggerFactory.getLogger(AddressClientImpl.class);
@@ -27,6 +28,10 @@ public class AddressClientImpl implements AddressClient{
     public AddressClientImpl(RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
     }
+
+    /*public List<Address> search(Long clientId) {
+        return searchAddresses(clientId);
+    }*/
 
     @Override
     public List<Address> searchAddresses(Long clientId) {

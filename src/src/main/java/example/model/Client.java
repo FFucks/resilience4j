@@ -10,6 +10,33 @@ public class Client {
     private String phoneNumber;
     private List<Address> addresses;
 
+    public Client() {}
+
+    public Client(Long id, String name, String document, String phoneNumber) {
+        this.id = id;
+        this.name = name;
+        this.document = document;
+        this.phoneNumber = phoneNumber;
+    }
+
+    public Client(Long id, String name, String document, String phoneNumber, List<Address> addresses) {
+        this.id = id;
+        this.name = name;
+        this.document = document;
+        this.phoneNumber = phoneNumber;
+        this.addresses = addresses;
+    }
+
+    public static Client clientOf(Client client, List<Address> addresses) {
+        return new Client(
+                client.getId(),
+                client.getName(),
+                client.getDocument(),
+                client.getPhoneNumber(),
+                addresses
+        );
+    }
+
     public Long getId() {
         return id;
     }

@@ -1,4 +1,4 @@
-package example.infra;
+package example.infra.client;
 
 import example.model.Address;
 
