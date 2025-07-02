@@ -5,6 +5,9 @@ import example.model.Client;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -15,6 +18,8 @@ import java.util.*;
 public class AddressClientImpl implements AddressClient {
 
     private final RestTemplate restTemplate;
+    private final AddressFeignClient addressFeignClient;
+
     private final Logger logger = LoggerFactory.getLogger(AddressClientImpl.class);
 
     private final Map<Long, List<Address>> CACHE = new HashMap<>();
@@ -25,30 +30,45 @@ public class AddressClientImpl implements AddressClient {
             .encode()
             .toUriString();
 
-    public AddressClientImpl(RestTemplate restTemplate) {
+
+    public AddressClientImpl(RestTemplate restTemplate, AddressFeignClient addressFeignClient) {
         this.restTemplate = restTemplate;
+        this.addressFeignClient = addressFeignClient;
     }
 
     @Override
     @CircuitBreaker(name = "addressCB", fallbackMethod = "searchCache")
     public List<Address> searchAddresses(Long clientId) {
-        final Map<String, Object> params = new HashMap<>();
-        params.put("clientId", clientId);
-
         logger.info("Searching Addresses");
-        final Address[] addresses;
+        final List<Address> addresses;
 
         try {
-            addresses = restTemplate.getForObject(API_URL, Address[].class, params);
+            addresses = addressFeignClient.searchAddresses(clientId);
+            //addresses = this.getFromRestTemplate(clientId);
+
         } catch (Exception e) {
             logger.error("Error on search address");
             throw e;
         }
 
         logger.info("Caching...");
-        CACHE.put(clientId, Arrays.asList(addresses));
+        CACHE.put(clientId, addresses);
 
-        return Arrays.asList(addresses);
+        return addresses;
+    }
+
+    private List<Address> getFromRestTemplate(Long clientId) {
+        final Map<String, Object> params = new HashMap<>();
+
+        ResponseEntity<List<Address>> response = restTemplate.exchange(
+                API_URL,
+                HttpMethod.GET,
+                null,
+                new ParameterizedTypeReference<List<Address>>() {},
+                params
+        );
+        params.put("clientId", clientId);
+        return response.getBody();
     }
 
     private List<Address> searchCache(Long clientId, Throwable e) {
